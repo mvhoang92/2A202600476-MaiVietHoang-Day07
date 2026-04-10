@@ -27,38 +27,69 @@ SAMPLE_FILES = [
     "data/tre_con_khong_duoc_an_thit_cho.txt",
 ]
 
+STORY_METADATA = {
+    "lao_hac": {
+        "title": "Lão Hạc",
+        "characters": ["Lão Hạc", "Cậu Vàng", "Ông Giáo", "Binh Tư"],
+        "tags": ["bán chó"]
+    },
+    "chi_pheo": {
+        "title": "Chí Phèo",
+        "characters": ["Chí Phèo", "Thị Nở", "Bá Kiến", "Lý Cường"],
+        "tags": ["tha hóa", "làng Vũ Đại", "bát cháo hành"]
+    },
+    "doi_mat": {
+        "title": "Đôi Mắt",
+        "characters": ["Hoàng", "Độ"],
+        "tags": ["trí thức", "kháng chiến"]
+    },
+    "doi_thua": {
+        "title": "Đời Thừa",
+        "characters": ["Hộ", "Từ"],
+        "tags": ["văn chương", "bi kịch trí thức"]
+    },
+    "mot_bua_no": {
+        "title": "Một Bữa No",
+        "characters": ["Bà lão", "Bà phó Thụ"],
+    },
+    "tre_con_khong_duoc_an_thit_cho": {
+        "title": "Trẻ con không được ăn thịt chó",
+    }
+}
 
 def load_documents_from_files(file_paths: list[str]) -> list[Document]:
-    """Load documents from file paths for the manual demo."""
     allowed_extensions = {".md", ".txt"}
     documents: list[Document] = []
 
     for raw_path in file_paths:
         path = Path(raw_path)
-
-        if path.suffix.lower() not in allowed_extensions:
-            print(f"Skipping unsupported file type: {path} (allowed: .md, .txt)")
-            continue
-
-        if not path.exists() or not path.is_file():
-            print(f"Skipping missing file: {path}")
+        if path.suffix.lower() not in allowed_extensions or not path.exists():
             continue
 
         from src.chunking import RecursiveChunker
         content = path.read_text(encoding="utf-8")
         
-        # Băm cuốn sách dài thành từng trang nhỏ khoảng 1000 chữ
-        chunks = RecursiveChunker(chunk_size=1000).chunk(content)
+        # Băm nhỏ với kích thước chunk nhỏ hơn để tăng độ chính xác tìm kiếm
+        chunks = RecursiveChunker(chunk_size=500).chunk(content)
+        
+        # Lấy metadata tương ứng với tên file
+        file_key = path.stem 
+        meta = STORY_METADATA.get(file_key, {})
         
         for i, text_chunk in enumerate(chunks):
             documents.append(
                 Document(
-                    id=f"{path.stem}_part_{i}",
+                    id=f"{file_key}_part_{i}",
                     content=text_chunk,
-                    metadata={"source": str(path), "extension": path.suffix.lower(), "chunk_idx": i},
+                    metadata={
+                        "source": str(path),
+                        "title": meta.get("title", file_key),
+                        "characters": ", ".join(meta.get("characters", [])),
+                        "tags": ", ".join(meta.get("tags", [])),
+                        "chunk_idx": i
+                    },
                 )
             )
-
     return documents
 
 
