@@ -74,10 +74,10 @@
 Chạy `ChunkingStrategyComparator().compare()` trên chi_pheo.txt (~38,000 ký tự):
 
 | Tài liệu | Strategy | Chunk Count | Avg Length | Preserves Context? |
-|-----------|----------|-------------|------------|-------------------|
-| chi_pheo.txt | FixedSizeChunker (`fixed_size`) | ~80 | 500 ký tự | Không — cắt ngang câu |
-| chi_pheo.txt | SentenceChunker (`by_sentences`) | ~95 | 400 ký tự | Tốt hơn — ngắt đúng câu |
-| chi_pheo.txt | RecursiveChunker (`recursive`) | 77 | ~494 ký tự | Tốt nhất — ngắt theo đoạn |
+|----------|----------|-------------|------------|--------------------|
+| chi_pheo.txt | fixed_size (500) | 111 | 497.8 | Không — cắt ngang câu |
+| chi_pheo.txt | by_sentences (3) | 301 | 182.0 | Tốt hơn — ngắt đúng câu |
+| chi_pheo.txt | recursive (500) | 149 | 368.8 | Tốt nhất — ngắt theo đoạn |
 
 ### Strategy Của Tôi
 
@@ -100,16 +100,17 @@ chunks = RecursiveChunker(chunk_size=500).chunk(content)
 
 | Tài liệu | Strategy | Chunk Count | Avg Length | Retrieval Quality? |
 |-----------|----------|-------------|------------|---------------------|
-| chi_pheo.txt | FixedSizeChunker(500) | ~80 | 500 | Thấp — cắt ngang câu, mất ngữ cảnh |
-| chi_pheo.txt | **RecursiveChunker(500) — của tôi** | 77 | ~495 | Cao — giữ nguyên đoạn văn, score 0.586 |
+| chi_pheo.txt | FixedSizeChunker(500) | 111 | 497.8 | Thấp — cắt ngang câu, mất ngữ cảnh |
+| chi_pheo.txt | **RecursiveChunker(500) — của tôi** | 149 | 368.8 | Cao — giữ nguyên đoạn văn, score 0.586 |
 
 ### So Sánh Với Thành Viên Khác
 
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Tôi (Hoàng) | RecursiveChunker(500) | 8/10 | Cân bằng ngữ cảnh và độ chính xác | Vẫn có thể tách nhân quả ở câu dài |
-| Giang | FixedSizeChunker(500, overlap=50) | 5/10 | Đơn giản, nhanh | Cắt ngang câu gây mất nghĩa |
-| Hùng | SentenceChunker(max_sentences=3) | 6/10 | Ngắt đúng câu | Chunk quá ngắn, mất ngữ cảnh dài |
+| Tôi (Hoàng) | RecursiveChunker(500) | 10/10 | Cân bằng ngữ cảnh và độ chính xác | Vẫn có thể tách nhân quả ở câu dài |
+| Hùng| SentenceChunker(3) | 9/10 |Ngắt đúng câu, bảo toàn lời thoại ngắn | Tạo ra số lượng chunk lớn, tăng tải hệ thống |
+| Giang | FixedSizeChunker(500, overlap=50) | 8.5 | Logic đơn giản, xử lý cực nhanh | Cắt ngang từ vựng gây mất nghĩa nghiêm trọng |
+
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
 > RecursiveChunker với chunk_size=500 phù hợp nhất cho văn học Nam Cao vì tác giả viết theo lối tường thuật có tính liên tục cao — một hành động thường kéo dài qua nhiều câu liên tiếp. Khi hỏi "Tại sao Chí Phèo rạch mặt?", cần đọc cả đoạn dẫn dắt chứ không phải chỉ 1-2 câu đơn lẻ. Strategy đệ quy ngắt đúng ranh giới đoạn nên LLM nhận được ngữ cảnh đầy đủ nhất.
@@ -159,11 +160,12 @@ tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_tr
 
 | Pair | Sentence A | Sentence B | Dự đoán | Actual Score | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | Trời mưa rất to | Mưa rơi nặng hạt | high | Cao (Gần 1.0) | Có |
-| 2 | Mùa hè nóng nực | Mùa đông lạnh giá | low | Thấp (~0) | Có |
-| 3 | Tôi rất yêu bóng đá | Bóng đá là môn tôi thích nhất | high | Cao | Có |
-| 4 | Trái đất quay quanh mặt trời | Gà là động vật đẻ trứng | low | Thấp (Khoảng 0) | Có |
-| 5 | Tôi ghét ăn cá | Tôi cực kì thích ăn cá | low | Cao (Gần 0.8) | KHÔNG |
+| 1 | Trời mưa rất to | Mưa rơi nặng hạt | high | 0.6571 | Có |
+| 2 | Mùa hè nóng nực | Mùa đông lạnh giá | low | 0.1321 | Có |
+| 3 | Tôi rất yêu bóng đá | Bóng đá là môn tôi thích nhất | high | 0.5678 | Có |
+| 4 | Trái đất quay quanh mặt trời | Gà là động vật đẻ trứng | low | 0.0015 | Có |
+| 5 | Tôi ghét ăn cá | Tôi cực kì thích ăn cá | low | 0.7696 | KHÔNG |
+
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn nghĩa?**
 > Pair 5 có chỉ số giống nhau cao ngất ngưởng thay vì phải ngược lại (low), đơn giản vì vector bị thu hút bởi cùng tập entity (TÔI, CÁ, ĂN) đứng chung trong 1 trường không gian của Ẩm thực. Điều này cho thấy Embeddings chỉ nắm bắt sự hiện diện của "Chủ đề" chứ không thực sự hiểu ý thức "Phủ định" ngữ nghĩa như con người được.
