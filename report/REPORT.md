@@ -1,7 +1,7 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** Mai Việt Hoàng
-**Nhóm:** Nhóm Nam Cao
+**Họ tên:** Mai Việt Hoàng 2A202600476
+**Nhóm:** 08
 **Ngày:** 10/04/2026
 
 ---
