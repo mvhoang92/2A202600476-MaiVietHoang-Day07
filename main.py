@@ -19,12 +19,12 @@ from src.models import Document
 from src.store import EmbeddingStore
 
 SAMPLE_FILES = [
-    "data/python_intro.txt",
-    "data/vector_store_notes.md",
-    "data/rag_system_design.md",
-    "data/customer_support_playbook.txt",
-    "data/chunking_experiment_report.md",
-    "data/vi_retrieval_notes.md",
+    "data/lao_hac.txt",
+    "data/chi_pheo.txt",
+    "data/doi_mat.txt",
+    "data/doi_thua.txt",
+    "data/mot_bua_no.txt",
+    "data/tre_con_khong_duoc_an_thit_cho.txt",
 ]
 
 
@@ -44,22 +44,50 @@ def load_documents_from_files(file_paths: list[str]) -> list[Document]:
             print(f"Skipping missing file: {path}")
             continue
 
+        from src.chunking import RecursiveChunker
         content = path.read_text(encoding="utf-8")
-        documents.append(
-            Document(
-                id=path.stem,
-                content=content,
-                metadata={"source": str(path), "extension": path.suffix.lower()},
+        
+        # Băm cuốn sách dài thành từng trang nhỏ khoảng 1000 chữ
+        chunks = RecursiveChunker(chunk_size=1000).chunk(content)
+        
+        for i, text_chunk in enumerate(chunks):
+            documents.append(
+                Document(
+                    id=f"{path.stem}_part_{i}",
+                    content=text_chunk,
+                    metadata={"source": str(path), "extension": path.suffix.lower(), "chunk_idx": i},
+                )
             )
-        )
 
     return documents
 
 
 def demo_llm(prompt: str) -> str:
-    """A simple mock LLM for manual RAG testing."""
-    preview = prompt[:400].replace("\n", " ")
-    return f"[DEMO LLM] Generated answer from prompt preview: {preview}..."
+    """Sử dụng OpenAI API để làm bộ não LLM thật"""
+    import os
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return "[LỖI] Xin hãy chạy lệnh: venv/bin/pip install openai"
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or api_key == "sk-your-openai-key-here":
+        return "[LỖI] Bạn chưa dán key vào biến OPENAI_API_KEY trong file .env kìa!"
+    
+    client = OpenAI(api_key=api_key)
+    print("Đang cầu viện OpenAI phân tích nội dung truyện Nam Cao...")
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", # Xài GPT-4o-mini rẻ và siêu nhanh
+            messages=[
+                {"role": "system", "content": "Bạn là một giáo sư văn học phân tích ngữ nghĩa xuất sắc. Nhiệm vụ của bạn là đọc kỹ đoạn [Context] được cấp và dùng duy nhất nội dung đó để trả lời [Question] bằng Tiếng Việt một cách sâu sắc."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"[LỖI API] {str(e)}"
 
 
 def run_manual_demo(question: str | None = None, sample_files: list[str] | None = None) -> int:
@@ -71,17 +99,6 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     print("Input file list:")
     for file_path in files:
         print(f"  - {file_path}")
-
-    docs = load_documents_from_files(files)
-    if not docs:
-        print("\nNo valid input files were loaded.")
-        print("Create files matching the sample paths above, then rerun:")
-        print("  python3 main.py")
-        return 1
-
-    print(f"\nLoaded {len(docs)} documents")
-    for doc in docs:
-        print(f"  - {doc.id}: {doc.metadata['source']}")
 
     load_dotenv(override=False)
     provider = os.getenv(EMBEDDING_PROVIDER_ENV, "mock").strip().lower()
@@ -101,12 +118,34 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     print(f"\nEmbedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}")
 
     store = EmbeddingStore(collection_name="manual_test_store", embedding_fn=embedder)
-    store.add_documents(docs)
+    
+    import pickle
+    db_file = "vector_db.pkl"
+    if os.path.exists(db_file):
+        print(f"\n[🚀 CACHE] Tìm thấy thư viện RAM đã đóng băng! Đang nạp lại từ ổ cứng {db_file} (Siêu tốc)...")
+        with open(db_file, "rb") as f:
+            store._store = pickle.load(f)
+    else:
+        print("\n[⏳ CACHE] Chưa có thư viện lưu trữ. Bắt đầu ép xung đọc 5 cuốn sách và gọi HuggingFace tính Vector...")
+        docs = load_documents_from_files(files)
+        if not docs:
+            print("\nNo valid input files were loaded.")
+            print("Create files matching the sample paths above, then rerun:")
+            print("  python3 main.py")
+            return 1
+            
+        print(f"\nLoaded {len(docs)} documents")
+        store.add_documents(docs)
+        
+        # Nén toàn bộ biến RAM xuống file cứng
+        with open(db_file, "wb") as f:
+            pickle.dump(store._store, f)
+        print(f"\n[🔥 CACHE] Bùm! Đã đúc thành công 207 mã vạch xuống file ổ cứng {db_file} để dùng mãi mãi thâu đêm!")
 
-    print(f"\nStored {store.get_collection_size()} documents in EmbeddingStore")
+    print(f"\nĐang tàng trữ {store.get_collection_size()} documents trong EmbeddingStore")
     print("\n=== EmbeddingStore Search Test ===")
     print(f"Query: {query}")
-    search_results = store.search(query, top_k=3)
+    search_results = store.search(query, top_k=15)
     for index, result in enumerate(search_results, start=1):
         print(f"{index}. score={result['score']:.3f} source={result['metadata'].get('source')}")
         print(f"   content preview: {result['content'][:120].replace(chr(10), ' ')}...")
@@ -115,7 +154,7 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     agent = KnowledgeBaseAgent(store=store, llm_fn=demo_llm)
     print(f"Question: {query}")
     print("Agent answer:")
-    print(agent.answer(query, top_k=3))
+    print(agent.answer(query, top_k=15))
     return 0
 
 

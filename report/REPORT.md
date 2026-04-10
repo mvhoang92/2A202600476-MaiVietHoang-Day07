@@ -11,29 +11,32 @@
 ### Cosine Similarity (Ex 1.1)
 
 **High cosine similarity nghĩa là gì?**
-> *Viết 1-2 câu:*
+> *Viết 1-2 câu:* 
+> Nó có nghĩa là 2 văn bản có hướng Vector chĩa về cùng một góc, mang đồ thị hàm số giống nhau tương đương với việc hiểu là ngữ nghĩa của chúng giống nhau bất chấp độ dài chữ.
 
 **Ví dụ HIGH similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao tương đồng:
+- Sentence A: Tôi rất thích nuôi mèo.
+- Sentence B: Mèo là loài động vật quyến rũ tuyệt vời.
+- Tại sao tương đồng: Đều cùng bao hàm góc nhìn yêu quý về chủ đề loài mèo.
 
 **Ví dụ LOW similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao khác:
+- Sentence A: Tôi rất thích nuôi chó.
+- Sentence B: Giá vàng đang trên đà lao dốc.
+- Tại sao khác: Hai câu thuộc hai cụm chủ đề khác biệt xa (Thú cưng vs Đầu tư tài chính).
 
 **Tại sao cosine similarity được ưu tiên hơn Euclidean distance cho text embeddings?**
 > *Viết 1-2 câu:*
+> Trục tọa độ Euclidean đo độ dài tịnh tiến nên bị sai lệch nặng khi một câu dài đụng một câu ngắn, còn Cosine Similarity đo góc lệnh (thành phần tỷ lệ) nên luôn đánh giá chính xác độ tương đồng ngữ nghĩa bất chấp chênh lệch số lượng ký tự.
 
 ### Chunking Math (Ex 1.2)
 
 **Document 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+> *Trình bày phép tính:* ceil((10000 - 50) / (500 - 50)) = ceil(9950 / 450) = 22.11
+> *Đáp án:* Làm tròn lên số lượng sẽ rơi vào 23 chunks.
 
 **Nếu overlap tăng lên 100, chunk count thay đổi thế nào? Tại sao muốn overlap nhiều hơn?**
-> *Viết 1-2 câu:*
+> *Viết 1-2 câu:* 
+> (10000 - 100) / (500 - 100) = ceil(24.75) = 25 chunks. (Số lượng chunks tạo ra nhiều hơn). Việc overlap cao giúp giữ lại sự nối tiếp mạch ngữ cảnh và ý tứ khi phần AI chặt ngang ở giữa đoạn.
 
 ---
 
@@ -120,30 +123,39 @@ Giải thích cách tiếp cận của bạn khi implement các phần chính tr
 
 **`SentenceChunker.chunk`** — approach:
 > *Viết 2-3 câu: dùng regex gì để detect sentence? Xử lý edge case nào?*
+> Sử dụng module regex `re.split` tạo nhóm tham chiếu `(\. |\! |\? |\.\n)` để vừa chia câu vừa giữ nguyên được biểu tượng kết thúc mà không làm mất. Xử lý edge case mảng array sole bị rác bằng `.strip()` vòng lặp.
 
 **`RecursiveChunker.chunk` / `_split`** — approach:
 > *Viết 2-3 câu: algorithm hoạt động thế nào? Base case là gì?*
+> Thuật toán đệ quy rẽ nhánh theo độ ưu tiên của bảng Separators (`\n\n` -> `\n` -> ` `). Khi có 1 cục chunk quá lớn vượt mốc chunkSize, máy chuyển chunk khổng lồ đó chui ngược vô lại hàm `_split()` cùng lưỡi dao cắt bé hơn. Base case là khi cục text đó đã thu bé an toàn <= chunkSize.
 
 ### EmbeddingStore
 
 **`add_documents` + `search`** — approach:
 > *Viết 2-3 câu: lưu trữ thế nào? Tính similarity ra sao?*
+> Add: Dùng module `_embedding_fn` để lấy Vector rồi đóng túi từ điển nhét vào biến list mảng của class. Search: Quét toán Cosine vòng lặp toàn bộ mảng lấy Score rồi `sort(reverse=True)` để lấy Top K danh sách cao điểm.
 
 **`search_with_filter` + `delete_document`** — approach:
 > *Viết 2-3 câu: filter trước hay sau? Delete bằng cách nào?*
+> Filter sẽ lọc trước khi chấm Cosine Vector để đỡ hao phí RAM cho cỗ máy. Delete hoạt động linh hoạt băng kĩ thuật `Array Comprehension` chắt lọc lấy các file loại bỏ document có thẻ `doc_id` cần xoá.
 
 ### KnowledgeBaseAgent
 
 **`answer`** — approach:
 > *Viết 2-3 câu: prompt structure? Cách inject context?*
+> Lệnh gọi `.search` kéo ra dữ liệu thật liên quan, ghép join bằng line-break `\n---\n` tạo string ngữ cảnh. Đúc kết mảng đó vào prompt chung quy định Agent *"Chỉ trả lời trong phạm vi Context"*.
 
 ### Test Results
 
 ```
-# Paste output of: pytest tests/ -v
+============================= test session starts ==============================
+...
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_true_for_existing_doc PASSED [100%]
+
+============================== 42 passed in 0.04s ==============================
 ```
 
-**Số tests pass:** __ / __
+**Số tests pass:** 42 / 42
 
 ---
 
@@ -151,14 +163,15 @@ Giải thích cách tiếp cận của bạn khi implement các phần chính tr
 
 | Pair | Sentence A | Sentence B | Dự đoán | Actual Score | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | | | high / low | | |
-| 2 | | | high / low | | |
-| 3 | | | high / low | | |
-| 4 | | | high / low | | |
-| 5 | | | high / low | | |
+| 1 | Trời mưa rất to | Mưa rơi nặng hạt | high | Cao (Gần 1.0) | Có |
+| 2 | Mùa hè nóng nực | Mùa đông lạnh giá | low | Thấp (Hay nghịch ~0/-1)| Có |
+| 3 | Tôi rất yêu bóng đá | Bóng đá là môn tôi thích nhất | high | Cao | Có |
+| 4 | Trái đất quay quanh mặt trời | Gà là động vật đẻ trứng | low | Thấp (Khoảng 0) | Có |
+| 5 | Tôi ghét ăn cá | Tôi cực kì thích ăn cá | low | Cao (Gần 0.8) | KHÔNG |
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn nghĩa?**
 > *Viết 2-3 câu:*
+> Pair 5 có chỉ số giống nhau cao ngất ngưởng thay vì phải ngược lại (low), đơn giản vì vector bị thu hút bởi cùng tập entity (TÔI, CÁ, ĂN) đứng chung trong 1 trường không gian của Ẩm thực. Điều này cho thấy Embeddings chỉ nắm bắt sự hiện diện của "Chủ đề" chứ không thực sự hiểu ý thức "Phủ định" ngữ nghĩa như con người được.
 
 ---
 
