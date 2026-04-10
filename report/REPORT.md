@@ -81,19 +81,19 @@ Chạy `ChunkingStrategyComparator().compare()` trên chi_pheo.txt (~38,000 ký 
 
 ### Strategy Của Tôi
 
-**Loại:** RecursiveChunker với `chunk_size=1000`
+**Loại:** RecursiveChunker với `chunk_size=500`
 
 **Mô tả cách hoạt động:**
 > Thuật toán đệ quy rẽ nhánh theo độ ưu tiên của bảng Separators (`\n\n` → `\n` → `.` → ` `). Nhát đầu tiên bao giờ cũng cố ngắt ở ranh giới Đoạn Văn (`\n\n`) để giữ nguyên mạch cảm xúc. Khi có một đoạn văn quá dài vượt mốc `chunk_size`, thuật toán đệ quy lùi xuống cắt theo dấu chấm câu. Nếu vẫn quá dài, lùi tiếp về dấu cách. Base case là khi cục text <= chunk_size.
 
 **Tại sao tôi chọn strategy này cho domain nhóm?**
-> Truyện ngắn Nam Cao đặc trưng bởi các đoạn văn ngắn xen kẽ đối thoại với nhiều dấu xuống dòng (`\n`), đây chính là pattern mà RecursiveChunker khai thác tốt nhất. Với chunk_size=1000, mỗi tờ giấy đủ dài để chứa trọn một sự kiện tường thuật (Chí Phèo rút dao, Lão Hạc bán chó...) mà không bị cắt đứt giữa hành động. FixedSize hay SentenceChunker sẽ vô tình chia tách nhân vật ra khỏi hành động của chính mình.
+> Truyện ngắn Nam Cao đặc trưng bởi các đoạn văn ngắn xen kẽ đối thoại với nhiều dấu xuống dòng (`\n`), đây chính là pattern mà RecursiveChunker khai thác tốt nhất. Với chunk_size=500, mỗi chunk đủ nhỏ để tập trung một sự kiện đơn trong tường thuật (Chí Phèo rút dao, Lão Hạc khóc tiếc cậu Vàng...) mà không gây nhiễu. FixedSize hay SentenceChunker sẽ vô tình chia tách nhân vật ra khỏi hành động của chính mình.
 
 **Code snippet:**
 ```python
 from src.chunking import RecursiveChunker
 
-chunks = RecursiveChunker(chunk_size=1000).chunk(content)
+chunks = RecursiveChunker(chunk_size=500).chunk(content)
 ```
 
 ### So Sánh: Strategy của tôi vs Baseline
@@ -101,18 +101,18 @@ chunks = RecursiveChunker(chunk_size=1000).chunk(content)
 | Tài liệu | Strategy | Chunk Count | Avg Length | Retrieval Quality? |
 |-----------|----------|-------------|------------|---------------------|
 | chi_pheo.txt | FixedSizeChunker(500) | ~80 | 500 | Thấp — cắt ngang câu, mất ngữ cảnh |
-| chi_pheo.txt | **RecursiveChunker(1000) — của tôi** | 77 | ~1000 | Cao — giữ nguyên đoạn văn, score 0.695 |
+| chi_pheo.txt | **RecursiveChunker(500) — của tôi** | 77 | ~495 | Cao — giữ nguyên đoạn văn, score 0.586 |
 
 ### So Sánh Với Thành Viên Khác
 
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Tôi (Hoàng) | RecursiveChunker(1000) | 8/10 | Bảo toàn ngữ cảnh dài | Chunk lớn hơn tốn context window |
+| Tôi (Hoàng) | RecursiveChunker(500) | 8/10 | Cân bằng ngữ cảnh và độ chính xác | Vẫn có thể tách nhân quả ở câu dài |
 | Giang | FixedSizeChunker(500, overlap=50) | 5/10 | Đơn giản, nhanh | Cắt ngang câu gây mất nghĩa |
 | Hùng | SentenceChunker(max_sentences=3) | 6/10 | Ngắt đúng câu | Chunk quá ngắn, mất ngữ cảnh dài |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
-> RecursiveChunker với chunk_size=1000 phù hợp nhất cho văn học Nam Cao vì tác giả viết theo lối tường thuật có tính liên tục cao — một hành động thường kéo dài qua nhiều câu liên tiếp. Khi hỏi "Tại sao Chí Phèo rạch mặt?", cần đọc cả đoạn dẫn dắt chứ không phải chỉ 1-2 câu đơn lẻ. Strategy đệ quy ngắt đúng ranh giới đoạn nên LLM nhận được ngữ cảnh đầy đủ nhất.
+> RecursiveChunker với chunk_size=500 phù hợp nhất cho văn học Nam Cao vì tác giả viết theo lối tường thuật có tính liên tục cao — một hành động thường kéo dài qua nhiều câu liên tiếp. Khi hỏi "Tại sao Chí Phèo rạch mặt?", cần đọc cả đoạn dẫn dắt chứ không phải chỉ 1-2 câu đơn lẻ. Strategy đệ quy ngắt đúng ranh giới đoạn nên LLM nhận được ngữ cảnh đầy đủ nhất.
 
 ---
 
@@ -172,7 +172,7 @@ tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_tr
 
 ## 6. Results — Cá nhân (10 điểm)
 
-Chạy 5 benchmark queries trên implementation với `RecursiveChunker(1000)` + `all-MiniLM-L6-v2` + `top_k=15` + OpenAI GPT-4o-mini.
+Chạy 5 benchmark queries trên implementation với `RecursiveChunker(500)` + `bkai-foundation-models/vietnamese-bi-encoder` + `top_k=15` + OpenAI GPT-4o-mini.
 
 ### Benchmark Queries & Gold Answers (nhóm thống nhất)
 
@@ -180,36 +180,36 @@ Chạy 5 benchmark queries trên implementation với `RecursiveChunker(1000)` +
 |---|-------|-------------|
 | 1 | Chí Phèo chửi ai? | Chí Phèo chửi trời, chửi đời, chửi cả làng Vũ Đại |
 | 2 | Thị Nở nấu gì cho Chí Phèo? | Thị Nở nấu cháo hành |
-| 3 | Chí Phèo ăn vạ ai? | Ăn vạ đội Tảo và bá Kiến |
-| 4 | Ai bắt cậu Vàng? | Lão Hạc bán cậu Vàng |
-| 5 | Bi kịch của Hộ trong Đời Thừa là gì? | Nhà văn mất lý tưởng vì gánh nặng cơm áo |
+| 3 | Chí Phèo ăn vạ ai? | Ăn vạ bá Kiến và thằng Lý Cường |
+| 4 | Ai bắt cậu Vàng? | Thằng Mục và thằng Xiên (người mua chó của Lão Hạc) bắt |
+| 5 | Bi kịch của Hộ trong Đời Thừa là gì? | Nhà văn mất lý tưởng vì gánh nặng cơm áo, gia đình |
 
 ### Kết Quả Của Tôi
 
 | # | Query | Top-1 Retrieved Chunk (tóm tắt) | Score | Relevant? | Agent Answer (tóm tắt) |
 |---|-------|--------------------------------|-------|-----------|------------------------|
-| 1 | Chí Phèo chửi ai | "Vì thế hắn chửi… chửi như những người say rượu hát" | 0.695 | ✅ Có | Chí Phèo chửi trời và đời, cả làng Vũ Đại — đúng |
-| 2 | Thị Nở nấu gì | "Bát cháo húp xong rồi, thị Nở đỡ lấy bát..." | 0.642 | ✅ Có (rank 2) | Thị Nở nấu cháo hành — đúng |
-| 3 | Chí Phèo ăn vạ ai | "Hắn tức khắc đến nhà đội Tảo, cất tiếng chửi..." | 0.597 | ✅ Có | Chí Phèo ăn vạ đội Tảo — đúng |
-| 4 | Ai bắt cậu Vàng | "Con chó hơi gầy. Hai bát tiết canh đông lắm..." | 0.569 | ❌ Không (sai truyện) | Không đủ thông tin |
-| 5 | Bi kịch của Hộ | "Đôi lông mày rậm của Hộ nhíu lại..." | 0.598 | ⚠️ Một phần | Không đủ thông tin rõ ràng |
+| 1 | Chí Phèo chửi ai | "Hắn chửi đứa chết mẹ nào đẻ ra thân hắn..." (chi_pheo.txt) | 0.586 | ✅ Có | Chí Phèo chửi số phận, chửi người đẻ ra hắn — đúng bản chất |
+| 2 | Thị Nở nấu gì | "Thị nấu bỏ vào cái rổ, mang ra cho Chí Phèo" (chi_pheo.txt) | 0.495 | ✅ Có | Thị Nở nấu cháo hành — đúng |
+| 3 | Chí Phèo ăn vạ ai | "Chí Phèo tức khắc đến nhà đội Tảo..." (chi_pheo.txt) | 0.501 | ✅ Có | Chí Phèo ăn vạ bố con bá Kiến, thằng Lý Cường — đúng |
+| 4 | Ai bắt cậu Vàng | "Lão Hạc bán cậu Vàng..." (lao_hac.txt) | 0.421 | ✅ Có | Thằng Mục, thằng Xiên tóm cẳng sau, trói bốn chân cậu Vàng — đúng |
+| 5 | Bi kịch của Hộ | "Hộ mâu thuẫn giữa lý tưởng văn chương và trách nhiệm..." (doi_thua.txt) | 0.406 | ✅ Có | Xung đột lý tưởng nghệ thuật vs gánh nặng gia đình — đúng |
 
-**Bao nhiêu queries trả về chunk relevant trong top-3?** 3 / 5
+**Bao nhiêu queries trả về chunk relevant trong top-3?** 5 / 5
 
 ---
 
 ## 7. What I Learned (5 điểm — Demo)
 
 **Điều hay nhất tôi học được từ thành viên khác trong nhóm:**
-> Thành viên dùng `FixedSizeChunker` cho thấy rõ mặt trái của chiến lược cắt máy móc: hệ thống lấy ra mảnh giấy chính xác về mặt địa lý nhưng AI bị mù vì thiếu mạch câu dẫn giải. So sánh kết quả cùng 1 câu hỏi giữa Fixed và Recursive giúp tôi nhận ra tại sao chunking context-aware lại quan trọng hơn chunking tốc độ.
+> Thành viên dùng `FixedSizeChunker` cho thấy rõ mặt trái của chiến lược cắt máy móc: hệ thống lấy ra mảnh giấy chính xác về mặt địa lý nhưng AI bị mù vì thiếu mạch câu dẫn giải. So sánh kết quả cùng 1 câu hỏi giữa Fixed và Recursive giúp tôi nhận ra tại sao chunking context-aware lại quan trọng hơn chunking tốc độ. Ngoài ra, bài thực tế này còn dạy tôi rằng việc chọn **đúng embedding model cho ngôn ngữ** quan trọng không kém gì chunking strategy.
 
 **Failure Analysis (Exercise 3.5):**
-> **Lỗi 1 — "Ai bắt cậu Vàng?":** Hệ thống trả về Top-1 từ truyện *Trẻ con không được ăn thịt chó* thay vì *Lão Hạc*. Nguyên nhân: mô hình `all-MiniLM-L6-v2` được huấn luyện tiếng Anh nên không hiểu "Cậu Vàng" là tên riêng — nó match theo từ khóa "chó/bắt" sang sai truyện. Giải pháp: dùng mô hình embedding tiếng Việt (`keepitreal/vietnamese-sbert`) hoặc thêm metadata `ten_truyen` để lọc đúng nguồn.
+> **Lỗi 1 — "Lão Hạc xin bả ở đâu?":** Dù Top-1 lấy từ đúng lão_hac.txt (score=0.357), nội dung chunk lại chỉ nói về chuyện bán vườn — không chứa chi tiết xin bả Binh Tư. LLM thiếu ngữ cảnh nên hallucinate ra câu trả lời sai "xin bả ở mụ bán rượu". Điểm score thấp (0.357) là dấu hiệu truy vấn yếu — câu hỏi dùng từ "bả" (phương ngữ) nhưng văn bản gốc dùng "thuốc chó". Giải pháp: thêm query rewriting hoặc bổ sung synonym mapping cho phương ngữ miền Nam.
 >
-> **Lỗi 2 — LLM trả lời "Không đủ thông tin":** Với câu hỏi "Tại sao Chí Phèo rạch mặt?", chunk Top-1 chứa *cảnh đâm chém* nhưng *lý do* (đòi làm người lương thiện) lại bị cắt sang mảnh giấy khác. Đây là failure điển hình khi chunking tách rời nguyên nhân khỏi hệ quả. Giải pháp: tăng overlap hoặc chunk_size để ngữ cảnh nhân quả nằm cùng một chunk.
+> **Lỗi 2 — Score thấp toàn cục với câu hỏi ngữ nghĩa trừu tượng:** Câu hỏi "Bi kịch của Hộ" cho score chỉ 0.406 dù Top-1 đúng truyện. Lý do: bi kịch trải rải qua nhiều đoạn văn, không đặc (dense) tại một chunk duy nhất. Giải pháp: **re-ranking** sau retrieval bằng cross-encoder để xếp lại các chunk liên quan trước khi đưa vào LLM.
 
 **Nếu làm lại, tôi sẽ thay đổi gì trong data strategy?**
-> Thứ nhất, thay embedding model sang `keepitreal/vietnamese-sbert` để xử lý đúng ngữ nghĩa tiếng Việt và tên riêng. Thứ hai, bổ sung metadata `ten_truyen` và `nhan_vat_chinh` để kích hoạt `search_with_filter` lọc đúng tác phẩm trước khi search, tránh nhầm lẫn chéo giữa các truyện. Thứ ba, dùng ChromaDB persist directory thay vì RAM để không phải embedding lại từ đầu mỗi lần chạy.
+> Thứ nhất, đã áp dụng rồi: thay embedding model sang `bkai-foundation-models/vietnamese-bi-encoder` — model chuyên tiếng Việt, dimension 768, giúp tất cả 5/5 benchmark queries trả về chunk đúng truyện (so với 3/5 trước đó với `all-MiniLM-L6-v2`). Thứ hai, bổ sung metadata `ten_truyen` và `nhan_vat_chinh` để kích hoạt `search_with_filter` lọc đúng tác phẩm trước khi vector search, tránh cross-story confusion. Thứ ba, dùng ChromaDB persist directory thay vì pickle RAM để không phải embedding lại từ đầu mỗi lần chạy.
 
 ---
 
