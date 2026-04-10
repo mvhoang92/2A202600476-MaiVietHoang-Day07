@@ -108,8 +108,8 @@ chunks = RecursiveChunker(chunk_size=1000).chunk(content)
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
 | Tôi (Hoàng) | RecursiveChunker(1000) | 8/10 | Bảo toàn ngữ cảnh dài | Chunk lớn hơn tốn context window |
-| Thành viên B | FixedSizeChunker(500, overlap=50) | 5/10 | Đơn giản, nhanh | Cắt ngang câu gây mất nghĩa |
-| Thành viên C | SentenceChunker(max_sentences=3) | 6/10 | Ngắt đúng câu | Chunk quá ngắn, mất ngữ cảnh dài |
+| Giang | FixedSizeChunker(500, overlap=50) | 5/10 | Đơn giản, nhanh | Cắt ngang câu gây mất nghĩa |
+| Hùng | SentenceChunker(max_sentences=3) | 6/10 | Ngắt đúng câu | Chunk quá ngắn, mất ngữ cảnh dài |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
 > RecursiveChunker với chunk_size=1000 phù hợp nhất cho văn học Nam Cao vì tác giả viết theo lối tường thuật có tính liên tục cao — một hành động thường kéo dài qua nhiều câu liên tiếp. Khi hỏi "Tại sao Chí Phèo rạch mặt?", cần đọc cả đoạn dẫn dắt chứ không phải chỉ 1-2 câu đơn lẻ. Strategy đệ quy ngắt đúng ranh giới đoạn nên LLM nhận được ngữ cảnh đầy đủ nhất.
